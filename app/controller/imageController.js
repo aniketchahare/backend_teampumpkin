@@ -6,7 +6,7 @@ module.exports = {
             var imgData = {
                 name: req.body.name,
                 category: req.body.category,
-                imgUrl: req.file,
+                imgUrl: req.files,
                 uploadedBy: req.token.id,
                 downloadsCount: 0
             };

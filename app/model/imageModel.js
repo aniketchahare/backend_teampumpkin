@@ -3,6 +3,8 @@
 var db = require('../../config/dbConfig')
 var Category = require('../model/categoryModel').Category;
 var User = require('../model/userModel').User;
+var ImageUrls = require('../model/imgModel').ImageUrls;
+var model = require('./index')
 
 var Image = db.sequelize.define('images', {
     id: {
@@ -20,12 +22,6 @@ var Image = db.sequelize.define('images', {
         type: db.Sequelize.UUID,
         allowNull: false,
         required: true
-    },
-    imgUrl: {
-        type: db.Sequelize.STRING,
-        allowNull: false,
-        required: true,
-        trim: true
     },
     downloadsCount: {
         type: db.Sequelize.INTEGER,
@@ -49,12 +45,25 @@ Image.belongsTo(User, {
     as: "uploadedByDetails",
 })
 
+Image.hasMany(ImageUrls, {
+    foreignKey: "imageId",
+    as: "imageUrlsList",
+})
+ImageUrls.belongsTo(Image)
+
 module.exports = {
     Image: Image,
 
     create(imgData, callback) {
         try {
             Image.create(imgData)
+                .then(async (result) => {
+                    let arr = [];
+                    imgData.imgUrl.forEach(element => {
+                        arr.push({ "imageId": result.id, "url": element })
+                    });
+                    return ImageUrls.bulkCreate(arr)
+                })
                 .then(result => {
                     return callback(null, result)
                 })
@@ -112,10 +121,17 @@ module.exports = {
                     association: 'uploadedByDetails',
                     attributes: ['name', 'userType']
                 }],
-                where: { category: imgData.categoryId }
+                where: { category: imgData.categoryId },
+                raw: true,
             })
-                .then(result => {
-                    return callback(null, result)
+                .then(async result => {
+                    let arr = [];
+                    for (let index = 0; index < result.length; index++) {
+                        let urls = await ImageUrls.findAll({ where: { "imageId": result[index].id }, raw: true, });
+                        result[index].urls = urls;
+                        arr.push(result[index]);
+                    }
+                    return callback(null, arr)
                 })
         } catch (err) {
             console.log(err);

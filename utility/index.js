@@ -55,7 +55,7 @@ module.exports = {
     },
 
     storeImg: (req, res, next) => {
-        var singleUpload = upload.single('file');
+        var singleUpload = upload.array('file', 12);
 
         singleUpload(req, res, (err, data) => {
             if (err) {
@@ -63,10 +63,12 @@ module.exports = {
                 return res.status(400).json({ message: err.message, statuscode: 400 })
             }
 
-            if ([undefined, "", null].includes(req.file)) {
+            if ([undefined, "", null].includes(req.files)) {
                 return next();
             }
-            req.file = req.file.path
+
+            let filesArr = req.files.map(val => val.path)
+            req.files = filesArr;
             next();
         })
     },
